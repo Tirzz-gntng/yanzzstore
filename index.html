@@ -1,0 +1,166 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YANZZ STORE | Panel Pterodactyl</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        [x-cloak] { display: none !important; }
+        .gradient-bg { background: linear-gradient(135deg, #1e293b, #0f172a); }
+    </style>
+</head>
+<body class="bg-slate-900 text-white font-sans" x-data="app()">
+
+    <!-- Header -->
+    <header class="p-5 flex justify-between items-center border-b border-slate-700 bg-slate-900 sticky top-0 z-50">
+        <h1 class="text-2xl font-bold">YANZZ STORE <i class="fa-solid fa-check-circle text-blue-500"></i></h1>
+        <button @click="showAdminLogin = true" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-sm transition">Admin Login</button>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto p-5">
+        <h2 class="text-3xl text-center mb-10 font-bold">List Harga Panel Pterodactyl</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <template x-for="(item, index) in products" :key="index">
+                <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg hover:border-blue-500 transition">
+                    <h3 class="text-xl font-bold mb-2" x-text="item.name"></h3>
+                    <p class="text-2xl text-blue-400 font-bold mb-4" x-text="'Rp' + item.price"></p>
+                    <button @click="openCheckout(item)" class="w-full bg-blue-600 py-2 rounded hover:bg-blue-700 transition">Beli Sekarang</button>
+                </div>
+            </template>
+        </div>
+    </main>
+
+    <!-- Chat Widget -->
+    <div class="fixed bottom-5 right-5 z-50">
+        <button @click="chatOpen = !chatOpen" class="bg-blue-600 p-4 rounded-full shadow-lg hover:scale-110 transition">
+            <i class="fa-solid fa-comment-dots text-2xl"></i>
+        </button>
+        <div x-show="chatOpen" class="absolute bottom-20 right-0 w-80 bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-4">
+            <h4 class="font-bold border-b border-slate-700 pb-2 mb-2">Live Chat CS</h4>
+            <div class="h-64 overflow-y-auto mb-2 space-y-2">
+                <template x-for="msg in messages" :key="msg.id">
+                    <div :class="msg.sender === 'user' ? 'text-right' : 'text-left'">
+                        <span class="px-3 py-1 rounded-lg text-sm" :class="msg.sender === 'user' ? 'bg-blue-600' : 'bg-slate-700'" x-text="msg.text"></span>
+                    </div>
+                </template>
+            </div>
+            <div class="flex gap-2">
+                <input x-model="chatInput" @keyup.enter="sendMessage" class="flex-1 bg-slate-900 border border-slate-700 p-2 rounded text-sm" placeholder="Ketik pesan...">
+                <button @click="sendMessage" class="bg-blue-600 px-3 py-1 rounded">Kirim</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Login Modal -->
+    <div x-show="showAdminLogin" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+        <div class="bg-slate-800 p-8 rounded-lg w-96">
+            <h2 class="text-xl font-bold mb-4">Admin Login</h2>
+            <input x-model="adminPass" type="password" placeholder="Password" class="w-full bg-slate-900 p-2 rounded mb-4">
+            <div class="flex gap-2">
+                <button @click="checkLogin" class="bg-green-600 px-4 py-2 rounded">Login</button>
+                <button @click="showAdminLogin = false" class="bg-red-600 px-4 py-2 rounded">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div x-show="isAdmin" class="fixed inset-0 bg-slate-900 z-50 p-10 overflow-y-auto">
+        <h2 class="text-3xl font-bold mb-5">Dashboard Admin</h2>
+        <button @click="isAdmin = false" class="mb-5 bg-red-600 px-4 py-2 rounded">Logout</button>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+            <!-- Edit Harga -->
+            <div class="bg-slate-800 p-6 rounded-lg">
+                <h3 class="font-bold mb-4">Edit Harga Panel</h3>
+                <template x-for="(item, index) in products" :key="index">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="w-32" x-text="item.name"></span>
+                        <input x-model="item.price" type="number" class="bg-slate-900 p-1 w-24 rounded">
+                        <button @click="saveSettings" class="bg-blue-600 px-2 py-1 rounded">Simpan</button>
+                    </div>
+                </template>
+            </div>
+            <!-- Edit Payment -->
+            <div class="bg-slate-800 p-6 rounded-lg">
+                <h3 class="font-bold mb-4">Edit Pembayaran</h3>
+                <label>Nomor DANA:</label>
+                <input x-model="payment.dana" class="w-full bg-slate-900 p-2 mb-4 rounded">
+                <label>Link QRIS:</label>
+                <input x-model="payment.qris" class="w-full bg-slate-900 p-2 mb-4 rounded">
+                <button @click="saveSettings" class="bg-green-600 w-full p-2 rounded">Simpan Data</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div x-show="showCheckout" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-800 p-6 rounded-lg w-full max-w-md">
+            <h2 class="font-bold mb-4">Checkout: <span x-text="checkoutItem.name"></span></h2>
+            <input x-model="orderData.username" placeholder="Username Panel" class="w-full bg-slate-900 p-2 rounded mb-2">
+            <input x-model="orderData.promo" placeholder="Kode Promo (Opsional)" class="w-full bg-slate-900 p-2 rounded mb-2">
+            <select x-model="orderData.method" class="w-full bg-slate-900 p-2 rounded mb-4">
+                <option value="DANA">DANA</option>
+                <option value="QRIS">QRIS</option>
+            </select>
+            <div class="flex gap-2">
+                <button @click="confirmOrder" class="bg-green-600 w-full py-2 rounded">Konfirmasi (Kirim via Telegram)</button>
+                <button @click="showCheckout = false" class="bg-red-600 w-full py-2 rounded">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+    <script>
+        function app() {
+            return {
+                showAdminLogin: false,
+                isAdmin: false,
+                adminPass: '',
+                chatOpen: false,
+                showCheckout: false,
+                checkoutItem: {},
+                chatInput: '',
+                messages: JSON.parse(localStorage.getItem('messages') || '[]'),
+                products: JSON.parse(localStorage.getItem('products') || JSON.stringify([
+                    {name: 'RAM 1GB', price: 2000}, {name: 'RAM 2GB', price: 3000},
+                    {name: 'RAM 3GB', price: 4000}, {name: 'RAM 4GB', price: 5000},
+                    {name: 'RAM 5GB', price: 7000}, {name: 'RAM 6GB', price: 8000},
+                    {name: 'RAM 8GB', price: 10000}, {name: 'RAM UNLIMITED', price: 15000},
+                    {name: 'ADMIN PANEL', price: 20000}, {name: 'OWNER PANEL', price: 30000}
+                ])),
+                payment: JSON.parse(localStorage.getItem('payment') || '{"dana": "08xxx", "qris": "url_qris"}'),
+                orderData: { username: '', promo: '', method: 'DANA' },
+
+                saveSettings() {
+                    localStorage.setItem('products', JSON.stringify(this.products));
+                    localStorage.setItem('payment', JSON.stringify(this.payment));
+                    alert('Data tersimpan!');
+                },
+                checkLogin() {
+                    if(this.adminPass === 'admin123') { this.isAdmin = true; this.showAdminLogin = false; }
+                    else { alert('Password Salah'); }
+                },
+                openCheckout(item) { this.checkoutItem = item; this.showCheckout = true; },
+                sendMessage() {
+                    if(!this.chatInput) return;
+                    this.messages.push({id: Date.now(), sender: 'user', text: this.chatInput});
+                    localStorage.setItem('messages', JSON.stringify(this.messages));
+                    this.chatInput = '';
+                },
+                confirmOrder() {
+                    const token = '8817955779:AAHLrlhsQ7OT2NKxUcdC_ABtOB99q2pVVr0';
+                    const chat_id = '8037663726';
+                    const text = `Pesanan Baru:\nProduk: ${this.checkoutItem.name}\nHarga: ${this.checkoutItem.price}\nUsername: ${this.orderData.username}\nMetode: ${this.orderData.method}`;
+                    fetch(`https://api.telegram.org/bot${token}/sendMessage?chat_id=${chat_id}&text=${encodeURIComponent(text)}`)
+                    .then(() => alert('Pesanan terkirim! Silahkan bayar via ' + this.payment[this.orderData.method.toLowerCase()]));
+                    this.showCheckout = false;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
